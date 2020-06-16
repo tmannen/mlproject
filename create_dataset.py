@@ -27,6 +27,32 @@ class ImageDataset(Dataset):
 
         return image, target
 
+class MultiImageDataset(Dataset):
+    def __init__(self, images, targets, transform=None):
+        self.images = images
+        self.targets = targets
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        four_images = []
+        for image in self.images[idx]:
+            image = Image.fromarray(image)
+            if self.transform:
+                image = self.transform(image)
+
+            four_images.append(image)
+
+        four_images = torch.stack(four_images)
+        target = self.targets[idx]
+        
+        return four_images, target
+
 def index_to_xy(index):
     """ Dataset index to xy coordinates """
     x = index % columns
@@ -38,9 +64,8 @@ def xy_to_index(x, y):
     index = y * columns + x
     return index
 
-def create_dataset():
-    # Data augmentation and normalization for training
-    # Just normalization for validation
+def create_dataset(multiple=False):
+    # multiple decides whether we take all 4 directions or not
     datas = [h5py.File(f"data//{f}", 'r') for f in os.listdir("data") if "hdf5" in f]
 
     rows = 10
@@ -55,14 +80,18 @@ def create_dataset():
                     }
 
     images = []
+    dir_images = []
     targets_index = []
     targets_xy = []
     targets_direction = []
 
-    for data in datas:
-        sensors = data['sensors']
-        for d in directions:
-            images.append(sensors[d][()])
+    if multiple:
+        for data in datas:
+            sensors = data['sensors']
+            dimages = []
+            for d in directions:
+                dimages.append(sensors[d][()])
+            images.append(np.stack(dimages).swapaxes(0, 1))
             idx = np.arange(100)
             x_target = idx % columns
             y_target = idx // columns
@@ -71,6 +100,20 @@ def create_dataset():
             targets_xy.append(xy_targets)
             dirs = np.repeat(dir_to_number[d], 100)
             targets_direction.append(dirs)
+
+    else:
+        for data in datas:
+            sensors = data['sensors']
+            for d in directions:
+                images.append(sensors[d][()])
+                idx = np.arange(100)
+                x_target = idx % columns
+                y_target = idx // columns
+                xy_targets = np.vstack([x_target, y_target]).T
+                targets_index.append(idx)
+                targets_xy.append(xy_targets)
+                dirs = np.repeat(dir_to_number[d], 100)
+                targets_direction.append(dirs)
 
     images = np.concatenate(images, axis=0)
     targets_index = torch.LongTensor(np.concatenate(targets_index))
@@ -101,8 +144,13 @@ def create_dataset():
     test_idxs = np.arange(9*step, step*10)
 
     image_datasets = {}
-    image_datasets['train'] = ImageDataset(images[train_idxs], targets_index[train_idxs], data_transforms['train'])
-    image_datasets['val'] = ImageDataset(images[val_idxs], targets_index[val_idxs], data_transforms['val'])
-    image_datasets['test'] = ImageDataset(images[test_idxs], targets_index[test_idxs], data_transforms['test'])
+    if multiple:
+        image_datasets['train'] = MultiImageDataset(images[train_idxs], targets_index[train_idxs], data_transforms['train'])
+        image_datasets['val'] = MultiImageDataset(images[val_idxs], targets_index[val_idxs], data_transforms['val'])
+        image_datasets['test'] = MultiImageDataset(images[test_idxs], targets_index[test_idxs], data_transforms['test'])
+    else:
+        image_datasets['train'] = ImageDataset(images[train_idxs], targets_index[train_idxs], data_transforms['train'])
+        image_datasets['val'] = ImageDataset(images[val_idxs], targets_index[val_idxs], data_transforms['val'])
+        image_datasets['test'] = ImageDataset(images[test_idxs], targets_index[test_idxs], data_transforms['test'])
 
     return image_datasets
