@@ -31,15 +31,17 @@ if __name__ == '__main__':
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    image_datasets = create_dataset.create_dataset()
+    image_datasets = create_dataset.create_dataset(multiple=True)
 
-    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=4,
+    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=5,
                                                 shuffle=True, num_workers=4)
                 for x in ['train', 'val', 'test']}
 
     dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val', 'test']}
 
-    model_ft = models.create_basic_model(device)
+    #model_ft = models.create_basic_model(device)
+    model_ft = models.MVCNN_original()
+    model_ft.to(device)
     criterion = nn.CrossEntropyLoss()
 
     optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
