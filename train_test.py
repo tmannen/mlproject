@@ -9,10 +9,11 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
+from torch.utils.tensorboard import SummaryWriter
 
-def train_model(model, dataloaders, dataset_sizes, criterion, optimizer, scheduler, device, num_epochs=25):
+def train_model(model, dataloaders, dataset_sizes, criterion, optimizer, scheduler, device, model_name, num_epochs=15):
     since = time.time()
-
+    writer = SummaryWriter(f"runs/{model_name}")
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
@@ -52,13 +53,14 @@ def train_model(model, dataloaders, dataset_sizes, criterion, optimizer, schedul
 
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+                running_corrects += torch.sum(preds == labels)
             if phase == 'train':
                 scheduler.step()
 
             epoch_loss = running_loss / dataset_sizes[phase]
             epoch_acc = running_corrects.double() / dataset_sizes[phase]
-
+            writer.add_scalar(f'{phase} Epoch loss', epoch_loss, epoch)
+            writer.add_scalar(f'{phase} Epoch accuracy', epoch_acc, epoch)
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
 

@@ -42,13 +42,17 @@ class MultiImageDataset(Dataset):
 
         four_images = []
         for image in self.images[idx]:
-            image = Image.fromarray(image)
             if self.transform:
+                image = Image.fromarray(image)
                 image = self.transform(image)
-
+            
             four_images.append(image)
 
-        four_images = torch.stack(four_images)
+        if self.transform:
+            four_images = torch.stack(four_images)
+        else:
+            four_images = np.stack(four_images)
+
         target = self.targets[idx]
         
         return four_images, target
@@ -64,9 +68,12 @@ def xy_to_index(x, y):
     index = y * columns + x
     return index
 
-def create_dataset(multiple=False):
+def create_dataset(multiple=False, amount=None):
     # multiple decides whether we take all 4 directions or not
-    datas = [h5py.File(f"data//{f}", 'r') for f in os.listdir("data") if "hdf5" in f]
+    data_names = sorted([n for n in os.listdir("data") if 'hdf5' in n])
+    if amount:
+        data_names = data_names[:amount]
+    datas = [h5py.File(f"data//{f}", 'r') for f in data_names]
 
     rows = 10
     columns = 10
@@ -90,7 +97,8 @@ def create_dataset(multiple=False):
             sensors = data['sensors']
             dimages = []
             for d in directions:
-                dimages.append(sensors[d][()])
+                imgs = sensors[d][()]
+                dimages.append(imgs[:,:230,:,:])
             images.append(np.stack(dimages).swapaxes(0, 1))
             idx = np.arange(100)
             x_target = idx % columns
@@ -105,7 +113,8 @@ def create_dataset(multiple=False):
         for data in datas:
             sensors = data['sensors']
             for d in directions:
-                images.append(sensors[d][()])
+                imgs = sensors[d][()]
+                images.append(imgs[:,:230,:,:])
                 idx = np.arange(100)
                 x_target = idx % columns
                 y_target = idx // columns

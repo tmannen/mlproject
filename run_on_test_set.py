@@ -8,10 +8,10 @@ if __name__ == '__main__':
 
     model = models.create_basic_model(device)
     model.load_state_dict(torch.load("models/basic_model.pt"))
+    model.to(device)
     model.eval()
 
-    data = create_dataset.create_dataset()
-    image_datasets = create_dataset.create_dataset()
+    image_datasets = create_dataset.create_dataset(False, 20)
 
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=1,
                                                 shuffle=True, num_workers=1)
@@ -27,7 +27,6 @@ if __name__ == '__main__':
 
         preds.append(pred.to('cpu'))
         gts.append(trgt)
-
 
     preds = torch.Tensor(preds)
     gts = torch.Tensor(gts)

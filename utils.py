@@ -21,3 +21,13 @@ def display_images(data, x, y):
     axarr[1,0].imshow(sensors['south'][index])
     axarr[1,1].imshow(sensors['west'][index])
     plt.show()
+
+def display_dataset_images(datapoint):
+    f, axarr = plt.subplots(2,2)
+    directions = ['north', 'east', 'south', 'west']
+    axes = [(0, 0), (0, 1), (1, 0), (1, 1)]
+    print("Label: ", datapoint[1])
+    for ilmansuunta, ax, img in zip(directions, axes, datapoint[0]):
+        axarr[ax[0],ax[1]].imshow(img)
+
+    plt.show()
